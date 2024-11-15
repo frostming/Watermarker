@@ -5,10 +5,7 @@ base:
   bold_font_size: 1
   font: ./fonts/AlibabaPuHuiTi-2-45-Light.otf
   font_size: 1
-  input_dir: ./input
-  output_dir: ./output
   quality: 100
-global:
   focal_length:
     use_equivalent_focal_length: false
   padding_with_original_ratio:
@@ -38,53 +35,9 @@ layout:
       color: '#212121'
       is_bold: true
       name: Param
-  logo_enable: false
-  logo_position: left
-  type: watermark_right_logo
+  type: watermark_left_logo
 logo:
-  default:
-    id: ''
-    path: ./logos/empty.png
-  makes:
-    apple:
-      id: APPLE
-      path: ./logos/apple.png
-    canon:
-      id: Canon
-      path: ./logos/canon.png
-    dji:
-      id: DJI
-      path: ./logos/DJI.jpg
-    empty:
-      id: "\u7A7A"
-      path: ./logos/empty.png
-    fujifilm:
-      id: FUJIFILM
-      path: ./logos/fujifilm.png
-    hasselblad:
-      id: HASSELBLAD
-      path: ./logos/hasselblad.png
-    huawei:
-      id: HUAWEI
-      path: ./logos/xmage.png
-    leica:
-      id: leica
-      path: ./logos/leica_logo.png
-    nikon:
-      id: NIKON
-      path: ./logos/nikon.png
-    olympus:
-      id: Olympus
-      path: ./logos/olympus_blue_gold.png
-    panasonic:
-      id: Panasonic
-      path: ./logos/panasonic.png
-    pentax:
-      id: PENTAX
-      path: ./logos/pentax.png
-    ricoh:
-      id: RICOH
-      path: ./logos/ricoh.png
-    sony:
-      id: SONY
-      path: ./logos/sony.png
+  enable: true
+  position: left
+  default: ./logos/fujifilm.png
+  directory: ./logos/

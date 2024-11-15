@@ -1,41 +1,61 @@
+from __future__ import annotations
+
+import enum
 import logging
 import platform
 import re
-import shutil
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Tuple, Union, overload
 
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageOps
+from PIL import Image, ImageDraw, ImageOps
 
-from enums.constant import TRANSPARENT
+from .constants import TRANSPARENT
 
-if platform.system() == 'Windows':
-    EXIFTOOL_PATH = Path('./exiftool/exiftool.exe')
-    ENCODING = 'gbk'
-elif shutil.which('exiftool') is not None:
-    EXIFTOOL_PATH = shutil.which('exiftool')
-    ENCODING = 'utf-8'
+if TYPE_CHECKING:
+    from PIL.ImageFont import FreeTypeFont
+
+if platform.system() == "Windows":
+    EXIFTOOL_PATH = Path("./exiftool/exiftool.exe")
+    ENCODING = "gbk"
 else:
-    EXIFTOOL_PATH = Path('./exiftool/exiftool')
-    ENCODING = 'utf-8'
+    EXIFTOOL_PATH = Path("./exiftool/exiftool")
+    ENCODING = "utf-8"
+
+Color = Union[Tuple[float, ...], str]
+Side = Literal["left", "right"]
+
+
+class Align(enum.IntEnum):
+    CENTER = 0
+    END = 1
+    START = 2
+
+
+class Axis(enum.IntEnum):
+    HORIZONTAL = 0
+    VERTICAL = 1
+
 
 logger = logging.getLogger(__name__)
 
 
-def get_file_list(path):
+def get_file_list(path: str) -> list[Path]:
     """
     获取 jpg 文件列表
     :param path: 路径
     :return: 文件名
     """
     path = Path(path, encoding=ENCODING)
-    return [file_path for file_path in path.iterdir()
-            if file_path.is_file() and file_path.suffix in ['.jpg', '.jpeg', '.JPG', '.JPEG', '.png', '.PNG']]
+    return [
+        file_path
+        for file_path in path.iterdir()
+        if file_path.is_file()
+        and file_path.suffix in [".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG"]
+    ]
 
 
-def get_exif(path) -> dict:
+def get_exif(path: str | Path) -> dict[str, str]:
     """
     获取exif信息
     :param path: 照片路径
@@ -43,36 +63,38 @@ def get_exif(path) -> dict:
     """
     exif_dict = {}
     try:
-        output_bytes = subprocess.check_output([EXIFTOOL_PATH, '-d', '%Y-%m-%d %H:%M:%S%3f%z', path])
-        output = output_bytes.decode('utf-8', errors='ignore')
+        output_bytes = subprocess.check_output(
+            [EXIFTOOL_PATH, "-d", "%Y-%m-%d %H:%M:%S%3f%z", str(path)]
+        )
+        output = output_bytes.decode("utf-8", errors="ignore")
 
         lines = output.splitlines()
         utf8_lines = [line for line in lines]
 
         for line in utf8_lines:
             # 将每一行按冒号分隔成键值对
-            kv_pair = line.split(':')
+            kv_pair = line.split(":", 1)
             if len(kv_pair) < 2:
                 continue
             key = kv_pair[0].strip()
-            value = ':'.join(kv_pair[1:]).strip()
+            value = kv_pair[1].strip()
             # 将键中的空格移除
-            key = re.sub(r'\s+', '', key)
-            key = re.sub(r'/', '', key)
+            key = re.sub(r"\s+", "", key)
+            key = re.sub(r"/", "", key)
             # 将键值对添加到字典中
             exif_dict[key] = value
         for key, value in exif_dict.items():
             # 过滤非 ASCII 字符
-            value_clean = ''.join(c for c in value if ord(c) < 128)
+            value_clean = "".join(c for c in value if ord(c) < 128)
             # 将处理后的值更新到 exif_dict 中
             exif_dict[key] = value_clean
     except Exception as e:
-        logger.error(f'get_exif error: {path} : {e}')
+        logger.error(f"get_exif error: {path} : {e}")
 
     return exif_dict
 
 
-def insert_exif(source_path, target_path) -> None:
+def insert_exif(source_path: Path, target_path: Path) -> None:
     """
     复制照片的 exif 信息
     :param source_path: 源照片路径
@@ -80,15 +102,20 @@ def insert_exif(source_path, target_path) -> None:
     """
     try:
         # 将 exif 信息转换为字节串
-        subprocess.check_output([EXIFTOOL_PATH, '-tagsfromfile', source_path, '-overwrite_original', target_path])
+        subprocess.check_output(
+            [
+                EXIFTOOL_PATH,
+                "-tagsfromfile",
+                source_path,
+                "-overwrite_original",
+                target_path,
+            ]
+        )
     except ValueError as e:
-        logger.exception(f'ValueError: {source_path}: cannot insert exif {str(e)}')
+        logger.exception(f"ValueError: {source_path}: cannot insert exif {str(e)}")
 
 
-TINY_HEIGHT = 800
-
-
-def remove_white_edge(image):
+def remove_white_edge(image: Image.Image) -> Image.Image:
     """
     移除图片白边
     :param image: 图片对象
@@ -111,16 +138,14 @@ def remove_white_edge(image):
                 max_x = max(max_x, x)
                 max_y = max(max_y, y)
 
-    # 计算新的图像大小
-    new_width = max_x - min_x + 1
-    new_height = max_y - min_y + 1
-
     # 裁剪图像
     new_image = image.crop((min_x, min_y, max_x + 1, max_y + 1))
     return new_image
 
 
-def concatenate_image(images, align='left'):
+def concatenate_image(
+    images: Iterable[Image.Image], align: Align = Align.START
+) -> Image.Image:
     """
     将多张图片拼接成一列
     :param images: 图片对象列表
@@ -132,20 +157,20 @@ def concatenate_image(images, align='left'):
     sum_height = sum(heights)
     max_width = max(widths)
 
-    new_img = Image.new('RGBA', (max_width, sum_height), color=TRANSPARENT)
+    new_img = Image.new("RGBA", (max_width, sum_height), color=TRANSPARENT)
 
     x_offset = 0
     y_offset = 0
-    if 'left' == align:
+    if align == Align.START:
         for img in images:
             new_img.paste(img, (0, y_offset))
             y_offset += img.height
-    elif 'center' == align:
+    elif align == Align.CENTER:
         for img in images:
             x_offset = int((max_width - img.width) / 2)
             new_img.paste(img, (x_offset, y_offset))
             y_offset += img.height
-    elif 'right' == align:
+    else:
         for img in images:
             x_offset = max_width - img.width  # 右对齐
             new_img.paste(img, (x_offset, y_offset))
@@ -153,7 +178,27 @@ def concatenate_image(images, align='left'):
     return new_img
 
 
-def padding_image(image, padding_size, padding_location='tb', color=TRANSPARENT) -> Image.Image:
+@overload
+def padding_image(
+    image: None, padding_size: int, padding_location: str = ..., color: Color = ...
+) -> None: ...
+
+
+@overload
+def padding_image(
+    image: Image.Image,
+    padding_size: int,
+    padding_location: str = ...,
+    color: Color = ...,
+) -> Image.Image: ...
+
+
+def padding_image(
+    image: Image.Image | None,
+    padding_size: int,
+    padding_location: str = "tb",
+    color: Color = TRANSPARENT,
+) -> Image.Image | None:
     """
     在图片四周填充白色像素
     :param image: 图片对象
@@ -166,23 +211,23 @@ def padding_image(image, padding_size, padding_location='tb', color=TRANSPARENT)
 
     total_width, total_height = image.size
     x_offset, y_offset = 0, 0
-    if 't' in padding_location:
+    if "t" in padding_location:
         total_height += padding_size
         y_offset += padding_size
-    if 'b' in padding_location:
+    if "b" in padding_location:
         total_height += padding_size
-    if 'l' in padding_location:
+    if "l" in padding_location:
         total_width += padding_size
         x_offset += padding_size
-    if 'r' in padding_location:
+    if "r" in padding_location:
         total_width += padding_size
 
-    padding_img = Image.new('RGBA', (total_width, total_height), color=color)
+    padding_img = Image.new("RGBA", (total_width, total_height), color=color)
     padding_img.paste(image, (x_offset, y_offset))
     return padding_img
 
 
-def square_image(image, auto_close=True) -> Image.Image:
+def square_image(image: Image.Image, auto_close: bool = True) -> Image.Image:
     """
     将图片按照正方形进行填充
     :param auto_close: 是否自动关闭图片对象
@@ -198,7 +243,7 @@ def square_image(image, auto_close=True) -> Image.Image:
     delta_w = abs(width - height)
     padding = (delta_w // 2, 0) if width < height else (0, delta_w // 2)
 
-    square_img = ImageOps.expand(image, padding, fill='white')
+    square_img = ImageOps.expand(image, padding, fill="white")
 
     if auto_close:
         image.close()
@@ -207,7 +252,9 @@ def square_image(image, auto_close=True) -> Image.Image:
     return square_img
 
 
-def resize_image_with_height(image, height, auto_close=True):
+def resize_image_with_height(
+    image: Image.Image, height: int, auto_close: bool = True
+) -> Image.Image:
     """
     按照高度对图片进行缩放
     :param image: 图片对象
@@ -232,7 +279,9 @@ def resize_image_with_height(image, height, auto_close=True):
     return resized_image
 
 
-def resize_image_with_width(image, width, auto_close=True):
+def resize_image_with_width(
+    image: Image.Image, width: int, auto_close: bool = True
+) -> Image.Image:
     """
     按照宽度对图片进行缩放
     :param image: 图片对象
@@ -257,7 +306,13 @@ def resize_image_with_width(image, width, auto_close=True):
     return resized_image
 
 
-def append_image_by_side(background, images, side='left', padding=200, is_start=False):
+def append_image_by_side(
+    background: Image.Image,
+    images: Sequence[Image.Image],
+    side: Side = "left",
+    padding: int = 200,
+    is_start: bool = False,
+) -> None:
     """
     将图片横向拼接到背景图片中
     :param background: 背景图片对象
@@ -267,13 +322,12 @@ def append_image_by_side(background, images, side='left', padding=200, is_start=
     :param is_start: 是否在最左侧添加 padding
     :return: 拼接后的图片对象
     """
-    if 'right' == side:
+    if side == "right":
         if is_start:
             x_offset = background.width - padding
         else:
             x_offset = background.width
-        images.reverse()
-        for i in images:
+        for i in reversed(images):
             if i is None:
                 continue
             i = resize_image_with_height(i, background.height, auto_close=False)
@@ -294,22 +348,32 @@ def append_image_by_side(background, images, side='left', padding=200, is_start=
             x_offset += padding
 
 
-def text_to_image(content, font, bold_font, is_bold=False, fill='black') -> Image.Image:
+def text_to_image(
+    content: str,
+    font: FreeTypeFont,
+    bold_font: FreeTypeFont,
+    is_bold: bool = False,
+    fill: str = "black",
+) -> Image.Image:
     """
     将文字内容转换为图片
     """
     if is_bold:
         font = bold_font
-    if content == '':
-        content = '   '
+    if content == "":
+        content = "   "
     _, _, text_width, text_height = font.getbbox(content)
-    image = Image.new('RGBA', (text_width, text_height), color=TRANSPARENT)
+    image = Image.new("RGBA", (text_width, text_height), color=TRANSPARENT)
     draw = ImageDraw.Draw(image)
     draw.text((0, 0), content, fill=fill, font=font)
     return image
 
 
-def merge_images(images, axis=0, align=0):
+def merge_images(
+    images: Iterable[Image.Image],
+    axis: Axis = Axis.HORIZONTAL,
+    align: Align = Align.CENTER,
+) -> Image.Image:
     """
     拼接多张图片
     :param images: 图片对象列表
@@ -321,7 +385,7 @@ def merge_images(images, axis=0, align=0):
     widths, heights = zip(*(img.size for img in images))
 
     # 计算输出图像的尺寸
-    if axis == 0:  # 水平拼接
+    if axis == Axis.HORIZONTAL:  # 水平拼接
         total_width = sum(widths)
         max_height = max(heights)
     else:  # 垂直拼接
@@ -329,24 +393,24 @@ def merge_images(images, axis=0, align=0):
         max_height = sum(heights)
 
     # 创建输出图像
-    output_image = Image.new('RGBA', (total_width, max_height), color=TRANSPARENT)
+    output_image = Image.new("RGBA", (total_width, max_height), color=TRANSPARENT)
 
     # 拼接图像
     x_offset, y_offset = 0, 0
     for img in images:
-        if axis == 0:  # 水平拼接
-            if align == 1:  # 底部对齐
+        if axis == Axis.HORIZONTAL:  # 水平拼接
+            if align == Align.END:  # 底部对齐
                 y_offset = max_height - img.size[1]
-            elif align == 2:  # 顶部对齐
+            elif align == Align.START:  # 顶部对齐
                 y_offset = 0
             else:  # 居中排列
                 y_offset = (max_height - img.size[1]) // 2
             output_image.paste(img, (x_offset, y_offset))
             x_offset += img.size[0]
         else:  # 垂直拼接
-            if align == 1:  # 右对齐
+            if align == Align.END:  # 右对齐
                 x_offset = total_width - img.size[0]
-            elif align == 2:  # 左对齐
+            elif align == Align.START:  # 左对齐
                 x_offset = 0
             else:  # 居中排列
                 x_offset = (total_width - img.size[0]) // 2
@@ -365,7 +429,13 @@ def calculate_pixel_count(width: int, height: int) -> str:
     return f"{megapixel_count:.2f} MP"
 
 
-def extract_attribute(data_dict: dict, *keys, default_value: str = '', prefix='', suffix='') -> str:
+def extract_attribute(
+    data_dict: dict[str, str],
+    *keys: str,
+    default_value: str = "",
+    prefix: str = "",
+    suffix: str = "",
+) -> str:
     """
     从字典中提取对应键的属性值
 
@@ -376,11 +446,11 @@ def extract_attribute(data_dict: dict, *keys, default_value: str = '', prefix=''
     """
     for key in keys:
         if key in data_dict:
-            return data_dict[key] + suffix
+            return prefix + data_dict[key] + suffix
     return default_value
 
 
-def extract_gps_lat_and_long(lat: str, long: str):
+def extract_gps_lat_and_long(lat: str, long: str) -> tuple[str, str]:
     # 提取出纬度和经度主要部分
     lat_deg, _, lat_min = re.findall(r"(\d+ deg \d+)", lat)[0].split()
     long_deg, _, long_min = re.findall(r"(\d+ deg \d+)", long)[0].split()
@@ -395,6 +465,6 @@ def extract_gps_lat_and_long(lat: str, long: str):
     return latitude, longitude
 
 
-def extract_gps_info(gps_info: str):
+def extract_gps_info(gps_info: str) -> tuple[str, str]:
     lat, long = gps_info.split(", ")
     return extract_gps_lat_and_long(lat, long)
