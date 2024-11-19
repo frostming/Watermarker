@@ -21,26 +21,30 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Install dependencies
-        run: uv sync --group gui
+        run: |
+          choco install 7zip
+          uv sync --group gui
 
       - name: Download exiftool
         shell: bash
         run: |
           curl -LO https://exiftool.org/exiftool-${{ env.EXIFTOOL_VERSION }}_64.zip
-          unzip exiftool-${{ env.EXIFTOOL_VERSION }}_64.zip
+          7z x exiftool-${{ env.EXIFTOOL_VERSION }}_64.zip
           rm exiftool-${{ env.EXIFTOOL_VERSION }}_64.zip
           mv exiftool-${{ env.EXIFTOOL_VERSION }}_64 exiftool
           mv "exiftool/exiftool(-k).exe" exiftool/exiftool.exe
 
       - name: Bundle app
+        shell: bash
         run: |
           uv run pyinstaller Watermarker.spec
+          7z a dist/Watermarker-windows.zip dist/Watermarker/
 
       - name: Archive Distribution Files
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/Watermarker/
+          name: dist-windows
+          path: dist/Watermarker-windows.zip
 
   dist_macos:
     name: Make MacOS Distribution
@@ -72,7 +76,7 @@ jobs:
       - name: Archive Distribution Files
         uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-macos
           path: dist/Watermarker-macos.dmg
 
   create_release:
@@ -87,7 +91,7 @@ jobs:
       - name: Get Dists
         uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist-*
           path: dist
 
       - name: Create GitHub Release
