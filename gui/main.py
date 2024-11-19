@@ -3,7 +3,7 @@ import traceback
 
 from PySide6.QtCore import QObject, QThread, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QFont
-from PySide6.QtWidgets import QFileDialog, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QWidget
 from qfluentwidgets import (
     ExpandLayout,
     InfoBar,
@@ -57,54 +57,50 @@ class WatermarkerDialog(QWidget):
 
         super().__init__()
         self.setWindowTitle(f"Watermarker v{__version__}")
-        self.vLayout = QVBoxLayout(self)
-        self.settingInterface = SettingInterface(self)
-        self.vLayout.setContentsMargins(0, 0, 0, 0)
-        self.vLayout.addWidget(self.settingInterface)
+        self.vLayout = ExpandLayout(self)
+        self.vLayout.setContentsMargins(20, 0, 20, 0)
+        self.settings = SettingInterface(self)
+        self.vLayout.addWidget(self.settings)
 
-        parent = QWidget(self)
-        layout = ExpandLayout(parent)
-        layout.setContentsMargins(10, 0, 10, 0)
+        layout = self.vLayout
         self.inputDir = PushSettingCard(
             "选择目录",
             fi.FOLDER,
             "输入目录",
             content=cfg.get(cfg.input_directory),
-            parent=parent,
+            parent=self,
         )
         self.outputDir = PushSettingCard(
             "选择目录",
             fi.FOLDER,
             "输出目录",
             content=cfg.get(cfg.output_directory),
-            parent=parent,
+            parent=self,
         )
-        self.showOutputButton = PushButton("打开输出目录", parent=parent)
+        self.showOutputButton = PushButton("打开输出目录", parent=self)
         self.outputDir.hBoxLayout.addWidget(self.showOutputButton)
         self.outputDir.hBoxLayout.addSpacing(16)
         layout.addWidget(self.inputDir)
         layout.addWidget(self.outputDir)
-        self.quality = RangeSettingCard(cfg.quality, fi.LEAF, "图像质量", parent=parent)
+        self.quality = RangeSettingCard(cfg.quality, fi.LEAF, "图像质量", parent=self)
         layout.addWidget(self.quality)
         self.process_button = PrimaryPushSettingCard(
-            "开始处理", fi.PLAY, "处理图像", parent=parent
+            "开始处理", fi.PLAY, "处理图像", parent=self
         )
         layout.addWidget(self.process_button)
 
-        self.logBrowser = TextBrowser(parent)
+        self.logBrowser = TextBrowser(self)
         font = QFont("SF Mono")
         font.setStyleHint(QFont.Monospace)
         self.logBrowser.setFont(font)
         self.logBrowser.setFixedHeight(200)
         self.logBrowser.setReadOnly(True)
         self.logBrowser.hide()
-        self.progress_bar = ProgressBar(parent)
+        self.progress_bar = ProgressBar(self)
         # self.progress_bar.hide()
         layout.addWidget(self.progress_bar)
         layout.addWidget(self.logBrowser)
-        self.vLayout.addWidget(parent)
-        self.vLayout.addSpacing(10)
-        self.setFixedWidth(800)
+        self.resize(800, 1000)
 
         self.process_button.clicked.connect(self.__onProcessButtonClicked)
         self.inputDir.clicked.connect(self.__onInputButtonClicked)

@@ -1,6 +1,13 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QIcon
-from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 from qfluentwidgets import (
     BodyLabel,
     CheckBox,
@@ -8,13 +15,12 @@ from qfluentwidgets import (
     ComboBox,
     ComboBoxSettingCard,
     ExpandGroupSettingCard,
-    ExpandLayout,
     ExpandSettingCard,
     LineEdit,
     OptionsSettingCard,
+    Pivot,
     PushButton,
     PushSettingCard,
-    ScrollArea,
     SettingCard,
     SettingCardGroup,
     SpinBox,
@@ -310,17 +316,37 @@ class LayoutSettingCard(SettingCardGroup):
             self.defaultLogo.setContent(file)
 
 
-class SettingInterface(ScrollArea):
+class SettingInterface(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        parent = self.scroll_widget = QWidget()
-        self.layout = ExpandLayout(parent)
-        self.layout.addWidget(BasicSettingCard(parent))
-        self.layout.addWidget(LayoutSettingCard(parent))
+        self.pivot = Pivot(self)
+        self.stackedWidget = QStackedWidget(self)
+        self.vlayout = QVBoxLayout(self)
+        self.basic_setting = BasicSettingCard(parent=self)
+        self.layout_setting = LayoutSettingCard(parent=self)
+        self.addSubInterface(self.basic_setting, "basicSetting", "基础设置")
+        self.addSubInterface(self.layout_setting, "layoutSetting", "布局设置")
 
-        self.__init_widget()
+        self.stackedWidget.currentChanged.connect(self.onCurrentIndexChanged)
+        self.stackedWidget.setCurrentWidget(self.basic_setting)
+        self.pivot.setCurrentItem(self.basic_setting.objectName())
 
-    def __init_widget(self):
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setWidget(self.scroll_widget)
-        self.setWidgetResizable(True)
+        self.vlayout.setContentsMargins(0, 0, 0, 30)
+        self.vlayout.addWidget(self.pivot, 0, Qt.AlignHCenter)
+        self.vlayout.addWidget(self.stackedWidget)
+        self.resize(600, 750)
+
+    def addSubInterface(self, widget: QWidget, objectName: str, text: str):
+        widget.setObjectName(objectName)
+        self.stackedWidget.addWidget(widget)
+
+        # 使用全局唯一的 objectName 作为路由键
+        self.pivot.addItem(
+            routeKey=objectName,
+            text=text,
+            onClick=lambda: self.stackedWidget.setCurrentWidget(widget),
+        )
+
+    def onCurrentIndexChanged(self, index):
+        widget = self.stackedWidget.widget(index)
+        self.pivot.setCurrentItem(widget.objectName())
