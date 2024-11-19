@@ -1,8 +1,9 @@
 import os
+import sys
 from functools import lru_cache
 
-from PyQt5.QtCore import QStandardPaths
-from PyQt5.QtGui import QColor, QFont, QFontDatabase, QGuiApplication
+from PySide6.QtCore import QStandardPaths
+from PySide6.QtGui import QColor, QFontDatabase
 from qfluentwidgets import (
     BoolValidator,
     ColorConfigItem,
@@ -14,12 +15,16 @@ from qfluentwidgets import (
     QConfig,
     RangeConfigItem,
     RangeValidator,
+    setThemeColor,
 )
+from qfluentwidgets.common import style_sheet
 from qfluentwidgets.components.settings import options_setting_card, setting_card
+from qframelesswindow.utils import getSystemAccentColor
 
 from watermarker.config import Config as CoreConfig
-from watermarker.config import Layout, get_font_level, get_font_size
+from watermarker.config import Layout
 from watermarker.constants import MODELS
+from watermarker.utils import BASE_PATH
 
 MODEL_OPTIONS = list(MODELS.keys())
 
@@ -36,16 +41,26 @@ class ColorItem(ColorConfigItem):
 
 class Config(QConfig):
     alternative_bold_font = ConfigItem(
-        "base", "alternative_bold_font", "./fonts/Roboto-Medium.ttf"
+        "base",
+        "alternative_bold_font",
+        os.path.join(BASE_PATH, "/fonts/Roboto-Medium.ttf"),
     )
     alternative_font = ConfigItem(
-        "base", "alternative_font", "./fonts/Roboto-Regular.ttf"
+        "base",
+        "alternative_font",
+        os.path.join(BASE_PATH, "fonts/Roboto-Regular.ttf"),
     )
-    bold_font = ConfigItem("base", "bold_font", "./fonts/AlibabaPuHuiTi-2-85-Bold.otf")
+    bold_font = ConfigItem(
+        "base",
+        "bold_font",
+        os.path.join(BASE_PATH, "fonts/AlibabaPuHuiTi-2-85-Bold.otf"),
+    )
     bold_font_size = OptionsConfigItem(
         "base", "bold_font_size", 1, OptionsValidator([1, 2, 3])
     )
-    font = ConfigItem("base", "font", "./fonts/AlibabaPuHuiTi-2-45-Light.otf")
+    font = ConfigItem(
+        "base", "font", os.path.join(BASE_PATH, "fonts/AlibabaPuHuiTi-2-45-Light.otf")
+    )
     font_size = ConfigItem("base", "font_size", 1, OptionsValidator([1, 2, 3]))
     quality = RangeConfigItem("base", "quality", 100, RangeValidator(1, 100))
     use_equivalent_focal_length = ConfigItem(
@@ -123,14 +138,19 @@ class Config(QConfig):
         "logo", "position", "left", OptionsValidator(["left", "right"])
     )
     logo_default = ConfigItem(
-        "logo", "default", "./logos/fujifilm.png", FileValidator()
+        "logo",
+        "default",
+        os.path.join(BASE_PATH, "logos/fujifilm.png"),
+        FileValidator(),
     )
-    logo_directory = ConfigItem("logo", "directory", "./logos/", FolderValidator())
+    logo_directory = ConfigItem(
+        "logo", "directory", os.path.join(BASE_PATH, "logos"), FolderValidator()
+    )
     input_directory = ConfigItem(
-        "base", "input_directory", "./input/", FolderValidator()
+        "base", "input_directory", os.path.expanduser("~/input")
     )
     output_directory = ConfigItem(
-        "base", "output_directory", "./output/", FolderValidator()
+        "base", "output_directory", os.path.expanduser("~/output")
     )
 
     def get_font_path(self, font: str) -> str:
@@ -164,61 +184,15 @@ class Config(QConfig):
             data["base"][font_key] = self.get_font_path(data["base"][font_key])
         return CoreConfig.model_validate(data)
 
-    @property
-    def qfont(self) -> QFont:
-        dpi = QGuiApplication.primaryScreen().logicalDotsPerInch()
-        font = QFont(self.font.value)
-        font.setPixelSize(int(get_font_size(self.font_size.value) * 72 / dpi))
-        return font
-
-    @qfont.setter
-    def qfont(self, font: QFont):
-        self.font.value = font.family()
-        self.font_size.value = get_font_level(font.pixelSize())
-        self.save()
-
-    @property
-    def qbold_font(self) -> QFont:
-        dpi = QGuiApplication.primaryScreen().logicalDotsPerInch()
-        font = QFont(self.bold_font.value)
-        font.setPixelSize(int(get_font_size(self.bold_font_size.value) * 72 / dpi))
-        return font
-
-    @qbold_font.setter
-    def qbold_font(self, font: QFont):
-        self.bold_font.value = font.family()
-        self.bold_font_size.value = get_font_level(font.pixelSize())
-        self.save()
-
-    @property
-    def qalternative_font(self) -> QFont:
-        dpi = QGuiApplication.primaryScreen().logicalDotsPerInch()
-        font = QFont(self.font.value)
-        font.setPixelSize(int(get_font_size(self.font_size.value) * 72 / dpi))
-        return font
-
-    @qalternative_font.setter
-    def qalternative_font(self, font: QFont):
-        self.alternative_font.value = font.family()
-        self.save()
-
-    @property
-    def qalternative_bold_font(self) -> QFont:
-        dpi = QGuiApplication.primaryScreen().logicalDotsPerInch()
-        font = QFont(self.bold_font.value)
-        font.setPixelSize(int(get_font_size(self.bold_font_size.value) * 72 / dpi))
-        return font
-
-    @qalternative_bold_font.setter
-    def qalternative_bold_font(self, font: QFont):
-        self.alternative_bold_font.value = font.family()
-        self.save()
-
 
 cfg = Config()
-cfg.load("config.json")
+cfg.load(os.path.join(BASE_PATH, "config.json"))
 options_setting_card.qconfig = cfg
 setting_card.qconfig = cfg
+
+if sys.platform in ["win32", "darwin"]:
+    style_sheet.qconfig = cfg
+    setThemeColor(getSystemAccentColor(), save=True)
 
 
 @lru_cache

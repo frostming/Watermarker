@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import enum
 import logging
+import os
 import platform
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Tuple, Union, overload
 
@@ -15,15 +17,29 @@ from .constants import TRANSPARENT
 if TYPE_CHECKING:
     from PIL.ImageFont import FreeTypeFont
 
-if platform.system() == "Windows":
-    EXIFTOOL_PATH = Path("./exiftool/exiftool.exe")
-    ENCODING = "gbk"
-else:
-    EXIFTOOL_PATH = Path("./exiftool/exiftool")
-    ENCODING = "utf-8"
 
 Color = Union[Tuple[float, ...], str]
 Side = Literal["left", "right"]
+
+MAC_BUNDLE_IDENTIFIER = "dev.fming.watermarker"
+
+
+def get_base_path():
+    if sys.platform == "darwin":
+        from AppKit import NSBundle
+
+        bundle = NSBundle.mainBundle()
+        if bundle.bundleIdentifier() == MAC_BUNDLE_IDENTIFIER:
+            bundle_path = bundle.bundlePath()
+            return os.path.join(bundle_path, "Contents", "Resources")
+    return os.curdir
+
+
+BASE_PATH = get_base_path()
+if platform.system() == "Windows":
+    EXIFTOOL_PATH = Path(BASE_PATH, "exiftool/exiftool.exe")
+else:
+    EXIFTOOL_PATH = Path(BASE_PATH, "exiftool/exiftool")
 
 
 class Align(enum.IntEnum):
@@ -46,7 +62,9 @@ def get_file_list(path: str) -> list[Path]:
     :param path: 路径
     :return: 文件名
     """
-    path = Path(path, encoding=ENCODING)
+    path = Path(path)
+    if not path.exists():
+        return []
     return [
         file_path
         for file_path in path.iterdir()

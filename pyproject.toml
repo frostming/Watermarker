@@ -14,4 +14,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-gui = ["PyQt-Fluent-Widgets"]
+gui = [
+    "pyinstaller>=6.11.1",
+    "PySide6-Fluent-Widgets",
+]

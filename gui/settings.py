@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QIcon
-from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QIcon
+from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QWidget
 from qfluentwidgets import (
     BodyLabel,
     CheckBox,
@@ -138,6 +138,7 @@ class MarginSettingCard(SettingCard):
         self.hBoxLayout.addWidget(QLabel("宽度"))
         self.hBoxLayout.addSpacing(12)
         self.hBoxLayout.addWidget(self.marginValueInput)
+        self.hBoxLayout.addSpacing(16)
         self.setSwitchValue(cfg.get(cfg.white_margin_enable))
         self.setValue(cfg.get(cfg.white_margin_width))
         self.marginSwitch.checkedChanged.connect(self.setSwitchValue)

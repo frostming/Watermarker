@@ -1,8 +1,9 @@
+import os
 import traceback
 
-from PyQt5.QtCore import QObject, QThread, QUrl, pyqtSignal
-from PyQt5.QtGui import QDesktopServices, QFont
-from PyQt5.QtWidgets import QFileDialog, QVBoxLayout, QWidget
+from PySide6.QtCore import QObject, QThread, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QFont
+from PySide6.QtWidgets import QFileDialog, QVBoxLayout, QWidget
 from qfluentwidgets import (
     ExpandLayout,
     InfoBar,
@@ -21,9 +22,9 @@ from .settings import SettingInterface
 
 
 class ProcessWorker(QObject):
-    finished = pyqtSignal(bool)
-    progress = pyqtSignal(int)
-    error = pyqtSignal(str)
+    finished = Signal(bool)
+    progress = Signal(int)
+    error = Signal(str)
 
     def __init__(self, config):
         super().__init__()
@@ -37,15 +38,16 @@ class ProcessWorker(QObject):
         success = True
 
         processor = build_processor_chain(self.config)
-        for i, file in enumerate(files):
-            try:
-                process_one(processor, file, cfg.output_directory.value)
+        output_directory = cfg.output_directory.value
+        os.makedirs(output_directory, exist_ok=True)
+        try:
+            for i, file in enumerate(files):
+                process_one(processor, file, output_directory)
                 self.progress.emit(int(i / total * 100))
-            except Exception:
-                traceback.print_exc()
-                self.error.emit(traceback.format_exc())
-                success = False
-                break
+        except Exception:
+            traceback.print_exc()
+            self.error.emit(traceback.format_exc())
+            success = False
         self.finished.emit(success)
 
 
