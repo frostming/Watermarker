@@ -236,7 +236,7 @@ class WatermarkProcessor(ProcessorComponent):
 
 class WatermarkRightLogoProcessor(WatermarkProcessor):
     LAYOUT_ID = Layout.WATERMARK_RIGHT_LOGO
-    LAYOUT_NAME = "normal(Logo 居右)"
+    LAYOUT_NAME = "标准(Logo 居右)"
 
     def __init__(self, config: Config):
         super().__init__(config)
@@ -245,7 +245,7 @@ class WatermarkRightLogoProcessor(WatermarkProcessor):
 
 class WatermarkLeftLogoProcessor(WatermarkProcessor):
     LAYOUT_ID = Layout.WATERMARK_LEFT_LOGO
-    LAYOUT_NAME = "normal"
+    LAYOUT_NAME = "标准"
 
     def __init__(self, config: Config):
         super().__init__(config)
@@ -254,7 +254,7 @@ class WatermarkLeftLogoProcessor(WatermarkProcessor):
 
 class DarkWatermarkRightLogoProcessor(WatermarkRightLogoProcessor):
     LAYOUT_ID = Layout.DARK_WATERMARK_RIGHT_LOGO
-    LAYOUT_NAME = "normal(黑红配色，Logo 居右)"
+    LAYOUT_NAME = "标准(黑红配色，Logo 居右)"
 
     def __init__(self, config: Config):
         super().__init__(config)
@@ -272,7 +272,7 @@ class DarkWatermarkRightLogoProcessor(WatermarkRightLogoProcessor):
 
 class DarkWatermarkLeftLogoProcessor(WatermarkLeftLogoProcessor):
     LAYOUT_ID = Layout.DARK_WATERMARK_LEFT_LOGO
-    LAYOUT_NAME = "normal(黑红配色)"
+    LAYOUT_NAME = "标准(黑红配色)"
 
     def __init__(self, config: Config):
         super().__init__(config)
@@ -290,7 +290,7 @@ class DarkWatermarkLeftLogoProcessor(WatermarkLeftLogoProcessor):
 
 class CustomWatermarkProcessor(WatermarkProcessor):
     LAYOUT_ID = Layout.CUSTOM
-    LAYOUT_NAME = "normal(自定义配置)"
+    LAYOUT_NAME = "标准(自定义配置)"
 
     def __init__(self, config: Config):
         super().__init__(config)

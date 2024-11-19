@@ -12,3 +12,6 @@ dependencies = [
     "requests>=2.32.3",
     "tqdm~=4.64",
 ]
+
+[dependency-groups]
+gui = ["PyQt-Fluent-Widgets"]

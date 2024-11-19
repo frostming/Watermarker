@@ -1,6 +1,4 @@
-from watermarker import Config, process
-
-config = Config.load("config.yaml")
+from gui.__main__ import main
 
 if __name__ == "__main__":
-    process(config, "input", "output")
+    main()

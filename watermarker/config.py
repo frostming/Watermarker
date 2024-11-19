@@ -112,6 +112,10 @@ class Config(BaseModel, extra="allow"):
 
     @classmethod
     def load(cls, path: str | Path) -> "Config":
+        path = Path(path)
+        if path.suffix in (".json"):
+            return cls.model_validate_json(path.read_bytes())
+
         import yaml
 
         with open(path, "r", encoding="utf-8") as f:
@@ -132,16 +136,10 @@ class Config(BaseModel, extra="allow"):
         return bold_font_size + font_size
 
     def get_font_size(self):
-        try:
-            return [240, 250, 300][self.base.font_size - 1]
-        except IndexError:
-            return 240
+        return get_font_size(self.base.font_size)
 
     def get_bold_font_size(self):
-        try:
-            return [260, 290, 320][self.base.bold_font_size - 1]
-        except IndexError:
-            return 260
+        return get_bold_font_size(self.base.bold_font_size)
 
     def get_font(self):
         return ImageFont.truetype(self.base.font, self.get_font_size())
@@ -173,3 +171,35 @@ class Config(BaseModel, extra="allow"):
         logo = Image.open(logo_path)
         self._logos[make] = logo
         return logo
+
+
+def get_font_size(level: int) -> int:
+    if level < 1:
+        return 240
+    if level > 3:
+        return 300
+    return [240, 250, 300][level - 1]
+
+
+def get_font_level(size: int) -> int:
+    if size <= 240:
+        return 1
+    elif size <= 300:
+        return 2
+    return 3
+
+
+def get_bold_font_level(size: int) -> int:
+    if size <= 260:
+        return 1
+    elif size <= 290:
+        return 2
+    return 3
+
+
+def get_bold_font_size(level: int) -> int:
+    if level < 1:
+        return 260
+    if level > 3:
+        return 320
+    return [260, 290, 320][level - 1]
