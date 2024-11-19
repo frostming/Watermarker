@@ -32,6 +32,10 @@ def get_base_path():
         if bundle.bundleIdentifier() == MAC_BUNDLE_IDENTIFIER:
             bundle_path = bundle.bundlePath()
             return os.path.join(bundle_path, "Contents", "Resources")
+    else:  # windows
+        exe_name = sys.argv[0]
+        if os.path.basename(exe_name).lower().startswith("watermarker"):
+            return os.path.join(os.path.dirname(exe_name), "_internal")
     return os.curdir
 
 
