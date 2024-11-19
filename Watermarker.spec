@@ -1,7 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import sys
 
 block_cipher = None
+
+if sys.platform == 'darwin':
+    icon = 'logo.icns'
+else:
+    icon = 'logo.ico'
 
 
 a = Analysis(
@@ -37,7 +43,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['logo.icns']
+    icon=[icon]
 )
 coll = COLLECT(
     exe,
@@ -49,9 +55,10 @@ coll = COLLECT(
     upx_exclude=[],
     name='Watermarker',
 )
-app = BUNDLE(
-    coll,
-    name='Watermarker.app',
-    icon='logo.icns',
-    bundle_identifier='dev.fming.watermarker',
-)
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        coll,
+        name='Watermarker.app',
+        icon='logo.icns',
+        bundle_identifier='dev.fming.watermarker',
+    )
