@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           uv run pyinstaller Watermarker.spec
-          7z a dist/Watermarker-windows.zip dist/Watermarker/
+          cd dist && 7z a Watermarker-windows.zip Watermarker/
 
       - name: Archive Distribution Files
         uses: actions/upload-artifact@v4
