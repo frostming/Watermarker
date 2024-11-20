@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QScrollArea,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -316,14 +317,16 @@ class LayoutSettingCard(SettingCardGroup):
             self.defaultLogo.setContent(file)
 
 
-class SettingInterface(QWidget):
+class SettingInterface(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.pivot = Pivot(self)
+
+        self.scrollWidget = parent = QWidget(self)
+        self.pivot = Pivot(parent)
         self.stackedWidget = QStackedWidget(self)
-        self.vlayout = QVBoxLayout(self)
-        self.basic_setting = BasicSettingCard(parent=self)
-        self.layout_setting = LayoutSettingCard(parent=self)
+        self.vlayout = QVBoxLayout(parent)
+        self.basic_setting = BasicSettingCard(parent=parent)
+        self.layout_setting = LayoutSettingCard(parent=parent)
         self.addSubInterface(self.basic_setting, "basicSetting", "基础设置")
         self.addSubInterface(self.layout_setting, "layoutSetting", "布局设置")
 
@@ -334,7 +337,11 @@ class SettingInterface(QWidget):
         self.vlayout.setContentsMargins(0, 0, 0, 30)
         self.vlayout.addWidget(self.pivot, 0, Qt.AlignHCenter)
         self.vlayout.addWidget(self.stackedWidget)
-        self.resize(600, 750)
+        self.resize(600, 600)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # self.setViewportMargins(0, 120, 0, 20)
+        self.setWidget(self.scrollWidget)
+        self.setWidgetResizable(True)
 
     def addSubInterface(self, widget: QWidget, objectName: str, text: str):
         widget.setObjectName(objectName)

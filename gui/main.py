@@ -97,7 +97,7 @@ class WatermarkerDialog(QWidget):
         self.logBrowser.setReadOnly(True)
         self.logBrowser.hide()
         self.progress_bar = ProgressBar(self)
-        # self.progress_bar.hide()
+        self.progress_bar.hide()
         layout.addWidget(self.progress_bar)
         layout.addWidget(self.logBrowser)
         self.resize(800, 1000)
