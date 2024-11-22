@@ -26,7 +26,7 @@
 
 ## 安装与下载
 
-到[发布页](https://github.com/frostming/Watermarker/releases) 下载对应系统的安装包，解压后即可使用。目前只支持 macOS 和 Windows。Linux 用户可以自行编译。
+到[发布页](https://github.com/frostming/Watermarker/releases)下载对应系统的安装包，解压后即可使用。目前只支持 macOS 和 Windows。Linux 用户可以查阅下面的开发文档自行编译。
 
 > [!TIP]
 > MacOS 安装包打开提示软件未签名解决方法，前往系统偏好设置 -> 安全性与隐私 -> 通用 -> 允许从任何来源下载的应用程序，然后再次打开安装包即可。
@@ -52,6 +52,12 @@ uv run main.py
 ```
 
 图形界面使用 [PySide6](https://doc.qt.io/qtforpython/) 开发。
+
+打包程序：
+
+```bash
+uv run pyinstaller Watermarker.spec
+```
 
 ## 鸣谢
 
