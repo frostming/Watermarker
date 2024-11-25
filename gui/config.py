@@ -40,16 +40,6 @@ class ColorItem(ColorConfigItem):
 
 
 class Config(QConfig):
-    alternative_bold_font = ConfigItem(
-        "base",
-        "alternative_bold_font",
-        os.path.join(BASE_PATH, "/fonts/Roboto-Medium.ttf"),
-    )
-    alternative_font = ConfigItem(
-        "base",
-        "alternative_font",
-        os.path.join(BASE_PATH, "fonts/Roboto-Regular.ttf"),
-    )
     bold_font = ConfigItem(
         "base",
         "bold_font",
@@ -175,12 +165,7 @@ class Config(QConfig):
             "enable": data["base"]["white_margin.enable"],
             "width": data["base"]["white_margin.width"],
         }
-        for font_key in [
-            "font",
-            "bold_font",
-            "alternative_font",
-            "alternative_bold_font",
-        ]:
+        for font_key in ["font", "bold_font"]:
             data["base"][font_key] = self.get_font_path(data["base"][font_key])
         return CoreConfig.model_validate(data)
 

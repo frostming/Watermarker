@@ -42,8 +42,6 @@ class WhiteMarginConfig(SwitchConfig):
 
 
 class BaseConfig(BaseModel):
-    alternative_bold_font: str
-    alternative_font: str
     bold_font: str
     font: str
     bold_font_size: PositiveInt = 1
@@ -146,14 +144,6 @@ class Config(BaseModel, extra="allow"):
 
     def get_bold_font(self):
         return ImageFont.truetype(self.base.bold_font, self.get_bold_font_size())
-
-    def get_alternative_font(self):
-        return ImageFont.truetype(self.base.alternative_font, self.get_font_size())
-
-    def get_alternative_bold_font(self):
-        return ImageFont.truetype(
-            self.base.alternative_bold_font, self.get_bold_font_size()
-        )
 
     def load_logo(self, make: str) -> Image.Image:
         """

@@ -192,9 +192,10 @@ class BasicSettingCard(SettingCardGroup):
 
 
 class FontSettingItem(QWidget):
-    def __init__(self, cfg_item, title, parent=None) -> None:
+    def __init__(self, cfg_item, title, size_item=None, parent=None) -> None:
         super().__init__(parent)
         self.cfg_item = cfg_item
+        self.size_item = size_item
         title = BodyLabel(title, self)
         hLayout = QHBoxLayout(self)
         hLayout.addWidget(title)
@@ -204,8 +205,15 @@ class FontSettingItem(QWidget):
         hLayout.addWidget(self.fontLabel)
         self.button = PushButton("选择字体", parent=self)
         hLayout.addWidget(self.button)
-
         self.button.clicked.connect(self.__onClicked)
+        if size_item:
+            self.fontSizeInput = SpinBox(self)
+            self.fontSizeInput.setRange(1, 3)
+            self.fontSizeInput.setValue(cfg.get(size_item))
+            hLayout.addWidget(self.fontSizeInput)
+            self.fontSizeInput.valueChanged.connect(
+                lambda value: cfg.set(size_item, value)
+            )
 
     def __onClicked(self):
         font, ok = QFileDialog.getOpenFileName(
@@ -219,18 +227,14 @@ class FontSettingItem(QWidget):
 class FontSettingCard(ExpandGroupSettingCard):
     def __init__(self, parent=None):
         super().__init__(fi.FONT, "字体设置", parent=parent)
-        self.fontButton = FontSettingItem(cfg.font, "普通文字", parent=self)
-        self.boldFontButton = FontSettingItem(cfg.bold_font, "突出文字", parent=self)
-        self.alternateFontButton = FontSettingItem(
-            cfg.alternative_font, "备用文字", parent=self
+        self.fontButton = FontSettingItem(
+            cfg.font, "普通文字", size_item=cfg.font_size, parent=self
         )
-        self.alternateBoldFontButton = FontSettingItem(
-            cfg.alternative_bold_font, "备用突出文字", parent=self
+        self.boldFontButton = FontSettingItem(
+            cfg.bold_font, "突出文字", size_item=cfg.bold_font_size, parent=self
         )
         self.addGroupWidget(self.fontButton)
         self.addGroupWidget(self.boldFontButton)
-        self.addGroupWidget(self.alternateFontButton)
-        self.addGroupWidget(self.alternateBoldFontButton)
 
         # self._adjustViewSize()
 

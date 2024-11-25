@@ -3,7 +3,7 @@ import string
 from PIL import Image, ImageFilter, ImageOps
 
 from .config import Config, Layout
-from .constants import GRAY, TRANSPARENT
+from .constants import GRAY, NONE_VALUE, TRANSPARENT
 from .image_container import ImageContainer
 from .utils import (
     Align,
@@ -138,7 +138,7 @@ class WatermarkProcessor(ProcessorComponent):
         ) + 0.02 * config.get_font_padding_level()
         # 水印中上下边缘空白部分的占比
         padding_ratio = (
-            0.52 if container.get_ratio() >= 1 else 0.7
+            0.48 if container.get_ratio() >= 1 else 0.6
         ) - 0.04 * config.get_font_padding_level()
 
         # 创建一个空白的水印图片
@@ -148,43 +148,69 @@ class WatermarkProcessor(ProcessorComponent):
 
         with Image.new("RGBA", (10, 100), color=self.bg_color) as empty_padding:
             # 填充左边的文字内容
-            left_top = text_to_image(
-                container.get_attribute_str(config.layout.elements.left_top),
-                config.get_font(),
-                config.get_bold_font(),
-                is_bold=self.bold_font_lt,
-                fill=self.font_color_lt,
-            )
-            left_bottom = text_to_image(
-                container.get_attribute_str(config.layout.elements.left_bottom),
-                config.get_font(),
-                config.get_bold_font(),
-                is_bold=self.bold_font_lb,
-                fill=self.font_color_lb,
-            )
-            left = concatenate_image([left_top, empty_padding, left_bottom])
+            left_parts = []
+            if config.layout.elements.left_top.name != NONE_VALUE:
+                left_parts.append(
+                    text_to_image(
+                        container.get_attribute_str(config.layout.elements.left_top),
+                        config.get_font(),
+                        config.get_bold_font(),
+                        is_bold=self.bold_font_lt,
+                        fill=self.font_color_lt,
+                    )
+                )
+            if config.layout.elements.left_bottom.name != NONE_VALUE:
+                if left_parts:
+                    left_parts.append(empty_padding)
+                left_parts.append(
+                    text_to_image(
+                        container.get_attribute_str(config.layout.elements.left_bottom),
+                        config.get_font(),
+                        config.get_bold_font(),
+                        is_bold=self.bold_font_lb,
+                        fill=self.font_color_lb,
+                    )
+                )
+            left = concatenate_image(left_parts)
             # 填充右边的文字内容
-            right_top = text_to_image(
-                container.get_attribute_str(config.layout.elements.right_top),
-                config.get_font(),
-                config.get_bold_font(),
-                is_bold=self.bold_font_rt,
-                fill=self.font_color_rt,
-            )
-            right_bottom = text_to_image(
-                container.get_attribute_str(config.layout.elements.right_bottom),
-                config.get_font(),
-                config.get_bold_font(),
-                is_bold=self.bold_font_rb,
-                fill=self.font_color_rb,
-            )
-            right = concatenate_image([right_top, empty_padding, right_bottom])
+            right_parts = []
+            if config.layout.elements.right_top.name != NONE_VALUE:
+                right_parts.append(
+                    text_to_image(
+                        container.get_attribute_str(config.layout.elements.right_top),
+                        config.get_font(),
+                        config.get_bold_font(),
+                        is_bold=self.bold_font_rt,
+                        fill=self.font_color_rt,
+                    )
+                )
+            if config.layout.elements.right_bottom.name != NONE_VALUE:
+                if right_parts:
+                    right_parts.append(empty_padding)
+                right_parts.append(
+                    text_to_image(
+                        container.get_attribute_str(
+                            config.layout.elements.right_bottom
+                        ),
+                        config.get_font(),
+                        config.get_bold_font(),
+                        is_bold=self.bold_font_rb,
+                        fill=self.font_color_rb,
+                    )
+                )
+            right = concatenate_image(right_parts)
 
         # 将左右两边的文字内容等比例缩放到相同的高度
-        max_height = max(left.height, right.height)
-        left = padding_image(left, int(max_height * padding_ratio), "tb")
-        right = padding_image(right, int(max_height * padding_ratio), "t")
-        right = padding_image(right, left.height - right.height, "b")
+        left_padding = right_padding = max(
+            200, int(max(left.height, right.height) * padding_ratio)
+        )
+        if (diff := left.height - right.height) > 0:
+            right_padding += diff // 2
+        elif diff < 0:
+            left_padding -= diff // 2
+
+        left = padding_image(left, left_padding, "tb")
+        right = padding_image(right, left_padding, "tb")
 
         logo = config.load_logo(container.make)
         if self.logo_enable:
@@ -332,22 +358,22 @@ class SimpleProcessor(ProcessorComponent):
 
         first_text = text_to_image(
             "Shot on",
-            self.config.get_alternative_font(),
-            self.config.get_alternative_bold_font(),
+            self.config.get_font(),
+            self.config.get_bold_font(),
             is_bold=False,
             fill="#212121",
         )
         model = text_to_image(
             container.get_model().replace(r"/", " ").replace(r"_", " "),
-            self.config.get_alternative_font(),
-            self.config.get_alternative_bold_font(),
+            self.config.get_font(),
+            self.config.get_bold_font(),
             is_bold=True,
             fill="#D32F2F",
         )
         make = text_to_image(
             container.get_make().split(" ")[0],
-            self.config.get_alternative_font(),
-            self.config.get_alternative_bold_font(),
+            self.config.get_font(),
+            self.config.get_bold_font(),
             is_bold=True,
             fill="#212121",
         )
@@ -359,8 +385,8 @@ class SimpleProcessor(ProcessorComponent):
         second_line_text = container.get_param_str()
         second_line = text_to_image(
             second_line_text,
-            self.config.get_alternative_font(),
-            self.config.get_alternative_bold_font(),
+            self.config.get_font(),
+            self.config.get_bold_font(),
             is_bold=False,
             fill="#9E9E9E",
         )

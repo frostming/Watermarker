@@ -385,7 +385,7 @@ def text_to_image(
     if content == "":
         content = "   "
     _, _, text_width, text_height = font.getbbox(content)
-    image = Image.new("RGBA", (text_width, text_height), color=TRANSPARENT)
+    image = Image.new("RGBA", (text_width, int(text_height * 1.2)), color=TRANSPARENT)
     draw = ImageDraw.Draw(image)
     draw.text((0, 0), content, fill=fill, font=font)
     return image
