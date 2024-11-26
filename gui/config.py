@@ -1,6 +1,7 @@
 import os
 import sys
 from functools import lru_cache
+from typing import NamedTuple
 
 from PySide6.QtCore import QStandardPaths
 from PySide6.QtGui import QColor, QFontDatabase
@@ -23,7 +24,7 @@ from qframelesswindow.utils import getSystemAccentColor
 
 from watermarker.config import Config as CoreConfig
 from watermarker.config import Layout
-from watermarker.constants import MODELS
+from watermarker.constants import COLOR_SCHEME_NAMES, MODELS
 from watermarker.utils import BASE_PATH
 
 MODEL_OPTIONS = list(MODELS.keys())
@@ -37,6 +38,18 @@ class FileValidator(ConfigValidator):
 class ColorItem(ColorConfigItem):
     def serialize(self):
         return self.value.name(QColor.HexRgb)
+
+
+class ColorScheme(NamedTuple):
+    foreground: str
+    background: str
+
+
+COLOR_SCHEMES = {
+    "default": ColorScheme("#212121", "#ffffff"),
+    "reverse": ColorScheme("#ffffff", "#212121"),
+    "blackred": ColorScheme("#D32F2F", "#212121"),
+}
 
 
 class Config(QConfig):
@@ -72,8 +85,14 @@ class Config(QConfig):
     white_margin_width = RangeConfigItem(
         "base", "white_margin.width", 3, RangeValidator(0, 30)
     )
+    color_scheme = OptionsConfigItem(
+        "layout",
+        "color_scheme",
+        "default",
+        OptionsValidator(list(COLOR_SCHEME_NAMES)),
+    )
+    foreground_color = ColorItem("layout", "foreground_color", "#212121")
     background_color = ColorItem("layout", "background_color", "#ffffff")
-    left_bottom_color = ColorItem("layout.elements.left_bottom", "color", "#757575")
     left_bottom_is_bold = ConfigItem(
         "layout.elements.left_bottom", "is_bold", False, BoolValidator()
     )
@@ -84,7 +103,6 @@ class Config(QConfig):
         OptionsValidator(MODEL_OPTIONS),
     )
     left_bottom_value = ConfigItem("layout.elements.left_bottom", "value", "")
-    left_top_color = ColorItem("layout.elements.left_top", "color", "#212121")
     left_top_is_bold = ConfigItem(
         "layout.elements.left_top", "is_bold", True, BoolValidator()
     )
@@ -95,7 +113,6 @@ class Config(QConfig):
         OptionsValidator(MODEL_OPTIONS),
     )
     left_top_value = ConfigItem("layout.elements.left_top", "value", "")
-    right_bottom_color = ColorItem("layout.elements.right_bottom", "color", "#757575")
     right_bottom_is_bold = ConfigItem(
         "layout.elements.right_bottom", "is_bold", False, BoolValidator()
     )
@@ -106,7 +123,6 @@ class Config(QConfig):
         OptionsValidator(MODEL_OPTIONS),
     )
     right_bottom_value = ConfigItem("layout.elements.right_bottom", "value", "")
-    right_top_color = ColorItem("layout.elements.right_top", "color", "#212121")
     right_top_is_bold = ConfigItem(
         "layout.elements.right_top", "is_bold", True, BoolValidator()
     )

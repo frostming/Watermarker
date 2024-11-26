@@ -11,6 +11,8 @@ from pydantic import (
     model_validator,
 )
 
+from .constants import DATE_VALUE, LENS_VALUE, MODEL_VALUE, PARAM_VALUE
+
 
 def _validate_hex_color(value: str) -> str:
     if not value.startswith("#") or len(value) != 7:
@@ -42,8 +44,8 @@ class WhiteMarginConfig(SwitchConfig):
 
 
 class BaseConfig(BaseModel):
-    bold_font: str
-    font: str
+    bold_font: str = "./fonts/AlibabaPuHuiTi-2-85-Bold.otf"
+    font: str = "./fonts/AlibabaPuHuiTi-2-45-Light.otf"
     bold_font_size: PositiveInt = 1
     font_size: PositiveInt = 1
     quality: PositiveInt = 100
@@ -54,7 +56,6 @@ class BaseConfig(BaseModel):
 
 
 class Element(BaseModel):
-    color: HexColor
     is_bold: bool
     name: str
     value: str = ""
@@ -67,19 +68,19 @@ class Element(BaseModel):
 
 
 class Elements(BaseModel):
-    left_bottom: Element
-    left_top: Element
-    right_bottom: Element
-    right_top: Element
+    left_bottom: Element = Field(
+        default_factory=lambda: Element(is_bold=False, name=LENS_VALUE)
+    )
+    left_top: Element = Field(
+        default_factory=lambda: Element(is_bold=True, name=MODEL_VALUE)
+    )
+    right_bottom: Element = Element(is_bold=False, name=DATE_VALUE)
+    right_top: Element = Element(is_bold=True, name=PARAM_VALUE)
 
 
 class Layout(enum.Enum):
     SQUARE = "square"
-    WATERMARK_RIGHT_LOGO = "watermark_right_logo"
-    WATERMARK_LEFT_LOGO = "watermark_left_logo"
-    DARK_WATERMARK_RIGHT_LOGO = "dark_watermark_right_logo"
-    DARK_WATERMARK_LEFT_LOGO = "dark_watermark_left_logo"
-    CUSTOM = "custom"
+    STANDARD = "standard"
     SIMPLE = "simple"
     BACKGROUND_BLUR = "background_blur"
     BACKGROUND_BLUR_WHITE_BORDER = "background_blur_white_border"
@@ -87,22 +88,23 @@ class Layout(enum.Enum):
 
 
 class LayoutConfig(BaseModel):
-    background_color: HexColor
-    elements: Elements
-    type: Layout = Layout.WATERMARK_LEFT_LOGO
+    foreground_color: HexColor = "#212121"
+    background_color: HexColor = "#ffffff"
+    elements: Elements = Field(default_factory=Elements)
+    type: Layout = Layout.STANDARD
 
 
 class LogoConfig(BaseModel):
-    directory: Path
-    default: Path
+    directory: Path = Path("./logos")
+    default: Path = Path("./logos/apple.png")
     enable: bool = True
     position: Literal["left", "right"] = "left"
 
 
 class Config(BaseModel, extra="allow"):
-    base: BaseConfig
-    layout: LayoutConfig
-    logo: LogoConfig
+    base: BaseConfig = Field(default_factory=BaseConfig)
+    layout: LayoutConfig = Field(default_factory=LayoutConfig)
+    logo: LogoConfig = Field(default_factory=LogoConfig)
 
     def model_post_init(self, _context) -> None:
         self.bg_color = self.layout.background_color

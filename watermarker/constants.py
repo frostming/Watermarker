@@ -44,3 +44,10 @@ GRAY = "#CBCBC9"
 
 DEFAULT_VALUE = "--"
 TINY_HEIGHT = 800
+
+COLOR_SCHEME_NAMES = {
+    "default": "默认",
+    "reverse": "反色",
+    "blackred": "黑红",
+    "custom": "自定义",
+}

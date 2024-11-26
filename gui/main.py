@@ -53,10 +53,8 @@ class ProcessWorker(QObject):
 
 class WatermarkerDialog(QWidget):
     def __init__(self):
-        from watermarker import __version__
-
         super().__init__()
-        self.setWindowTitle(f"Watermarker v{__version__}")
+        self.setWindowTitle("Watermarker 水印仔")
         self.vLayout = ExpandLayout(self)
         self.vLayout.setContentsMargins(20, 0, 20, 0)
         self.settings = SettingInterface(self)

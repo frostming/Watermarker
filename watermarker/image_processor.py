@@ -9,8 +9,7 @@ from .utils import (
     Align,
     Axis,
     append_image_by_side,
-    concatenate_image,
-    merge_images,
+    concatenate_images,
     padding_image,
     resize_image_with_height,
     resize_image_with_width,
@@ -103,22 +102,24 @@ class SquareProcessor(ProcessorComponent):
         container.update_watermark_img(square_image(image, auto_close=False))
 
 
-class WatermarkProcessor(ProcessorComponent):
+class StandardProcessor(ProcessorComponent):
+    LAYOUT_ID = Layout.STANDARD
+    LAYOUT_NAME = "标准"
+
     def __init__(self, config: Config):
         super().__init__(config)
         # 默认值
-        self.logo_position = "left"
-        self.logo_enable = True
-        self.bg_color = "#ffffff"
-        self.line_color = GRAY
-        self.font_color_lt = "#212121"
-        self.bold_font_lt = True
-        self.font_color_lb = "#424242"
-        self.bold_font_lb = False
-        self.font_color_rt = "#212121"
-        self.bold_font_rt = True
-        self.font_color_rb = "#424242"
-        self.bold_font_rb = False
+        self.logo_position = config.logo.position
+        self.logo_enable = config.logo.enable
+        self.bg_color = config.layout.background_color
+        self.font_color_lt = config.layout.foreground_color
+        self.bold_font_lt = config.layout.elements.left_top.is_bold
+        self.font_color_lb = config.layout.foreground_color
+        self.bold_font_lb = config.layout.elements.left_bottom.is_bold
+        self.font_color_rt = config.layout.foreground_color
+        self.bold_font_rt = config.layout.elements.right_top.is_bold
+        self.font_color_rb = config.layout.foreground_color
+        self.bold_font_rb = config.layout.elements.right_bottom.is_bold
 
     def is_logo_left(self):
         return self.logo_position == "left"
@@ -136,10 +137,6 @@ class WatermarkProcessor(ProcessorComponent):
         ratio = (
             0.04 if container.get_ratio() >= 1 else 0.09
         ) + 0.02 * config.get_font_padding_level()
-        # 水印中上下边缘空白部分的占比
-        padding_ratio = (
-            0.48 if container.get_ratio() >= 1 else 0.6
-        ) - 0.04 * config.get_font_padding_level()
 
         # 创建一个空白的水印图片
         watermark = Image.new(
@@ -171,7 +168,7 @@ class WatermarkProcessor(ProcessorComponent):
                         fill=self.font_color_lb,
                     )
                 )
-            left = concatenate_image(left_parts)
+            left = concatenate_images(left_parts, Axis.VERTICAL, Align.START)
             # 填充右边的文字内容
             right_parts = []
             if config.layout.elements.right_top.name != NONE_VALUE:
@@ -198,46 +195,26 @@ class WatermarkProcessor(ProcessorComponent):
                         fill=self.font_color_rb,
                     )
                 )
-            right = concatenate_image(right_parts)
-
-        # 将左右两边的文字内容等比例缩放到相同的高度
-        left_padding = right_padding = max(
-            200, int(max(left.height, right.height) * padding_ratio)
-        )
-        if (diff := left.height - right.height) > 0:
-            right_padding += diff // 2
-        elif diff < 0:
-            left_padding -= diff // 2
-
-        left = padding_image(left, left_padding, "tb")
-        right = padding_image(right, left_padding, "tb")
+            right = concatenate_images(right_parts, Axis.VERTICAL, Align.START)
 
         logo = config.load_logo(container.make)
         if self.logo_enable:
             if self.is_logo_left():
                 # 如果 logo 在左边
-                line = LINE_TRANSPARENT.copy()
-                logo = padding_image(logo, int(padding_ratio * logo.height))
-                append_image_by_side(
-                    watermark, [line, logo, left], is_start=logo is None
-                )
+                append_image_by_side(watermark, [logo, left])
                 append_image_by_side(watermark, [right], side="right")
             else:
                 # 如果 logo 在右边
                 if logo is not None:
-                    # 如果 logo 不为空，等比例缩小 logo
-                    logo = padding_image(logo, int(padding_ratio * logo.height))
                     # 插入一根线条用于分割 logo 和文字
-                    line = padding_image(
-                        LINE_GRAY, int(padding_ratio * LINE_GRAY.height * 0.8)
-                    )
+                    line = LINE_GRAY.copy()
                 else:
                     line = LINE_TRANSPARENT.copy()
-                append_image_by_side(watermark, [left], is_start=True)
+                append_image_by_side(watermark, [left])
                 append_image_by_side(watermark, [logo, line, right], side="right")
                 line.close()
         else:
-            append_image_by_side(watermark, [left], is_start=True)
+            append_image_by_side(watermark, [left])
             append_image_by_side(watermark, [right], side="right")
         left.close()
         right.close()
@@ -258,80 +235,6 @@ class WatermarkProcessor(ProcessorComponent):
         # 更新图片对象
         result = ImageOps.exif_transpose(result).convert("RGB")
         container.update_watermark_img(result)
-
-
-class WatermarkRightLogoProcessor(WatermarkProcessor):
-    LAYOUT_ID = Layout.WATERMARK_RIGHT_LOGO
-    LAYOUT_NAME = "标准(Logo 居右)"
-
-    def __init__(self, config: Config):
-        super().__init__(config)
-        self.logo_position = "right"
-
-
-class WatermarkLeftLogoProcessor(WatermarkProcessor):
-    LAYOUT_ID = Layout.WATERMARK_LEFT_LOGO
-    LAYOUT_NAME = "标准"
-
-    def __init__(self, config: Config):
-        super().__init__(config)
-        self.logo_position = "left"
-
-
-class DarkWatermarkRightLogoProcessor(WatermarkRightLogoProcessor):
-    LAYOUT_ID = Layout.DARK_WATERMARK_RIGHT_LOGO
-    LAYOUT_NAME = "标准(黑红配色，Logo 居右)"
-
-    def __init__(self, config: Config):
-        super().__init__(config)
-        self.bg_color = "#212121"
-        self.line_color = GRAY
-        self.font_color_lt = "#D32F2F"
-        self.bold_font_lt = True
-        self.font_color_lb = "#d4d1cc"
-        self.bold_font_lb = False
-        self.font_color_rt = "#D32F2F"
-        self.bold_font_rt = True
-        self.font_color_rb = "#d4d1cc"
-        self.bold_font_rb = False
-
-
-class DarkWatermarkLeftLogoProcessor(WatermarkLeftLogoProcessor):
-    LAYOUT_ID = Layout.DARK_WATERMARK_LEFT_LOGO
-    LAYOUT_NAME = "标准(黑红配色)"
-
-    def __init__(self, config: Config):
-        super().__init__(config)
-        self.bg_color = "#212121"
-        self.line_color = GRAY
-        self.font_color_lt = "#D32F2F"
-        self.bold_font_lt = True
-        self.font_color_lb = "#d4d1cc"
-        self.bold_font_lb = False
-        self.font_color_rt = "#D32F2F"
-        self.bold_font_rt = True
-        self.font_color_rb = "#d4d1cc"
-        self.bold_font_rb = False
-
-
-class CustomWatermarkProcessor(WatermarkProcessor):
-    LAYOUT_ID = Layout.CUSTOM
-    LAYOUT_NAME = "标准(自定义配置)"
-
-    def __init__(self, config: Config):
-        super().__init__(config)
-        # 读取配置文件
-        self.logo_position = self.config.logo.position
-        self.logo_enable = self.config.logo.enable
-        self.bg_color = self.config.layout.background_color
-        self.font_color_lt = self.config.layout.elements.left_top.color
-        self.bold_font_lt = self.config.layout.elements.left_top.is_bold
-        self.font_color_lb = self.config.layout.elements.left_bottom.color
-        self.bold_font_lb = self.config.layout.elements.left_bottom.is_bold
-        self.font_color_rt = self.config.layout.elements.right_top.color
-        self.bold_font_rt = self.config.layout.elements.right_top.is_bold
-        self.font_color_rb = self.config.layout.elements.right_bottom.color
-        self.bold_font_rb = self.config.layout.elements.right_bottom.is_bold
 
 
 class MarginProcessor(ProcessorComponent):
@@ -377,7 +280,7 @@ class SimpleProcessor(ProcessorComponent):
             is_bold=True,
             fill="#212121",
         )
-        first_line = merge_images(
+        first_line = concatenate_images(
             [first_text, MIDDLE_HORIZONTAL_GAP, model, MIDDLE_HORIZONTAL_GAP, make],
             Axis.HORIZONTAL,
             Align.END,
@@ -390,7 +293,7 @@ class SimpleProcessor(ProcessorComponent):
             is_bold=False,
             fill="#9E9E9E",
         )
-        image = merge_images(
+        image = concatenate_images(
             [first_line, MIDDLE_VERTICAL_GAP, second_line], Axis.VERTICAL, Align.CENTER
         )
         height = container.get_height() * ratio * padding_ratio
@@ -404,7 +307,7 @@ class SimpleProcessor(ProcessorComponent):
         bg = Image.new("RGBA", watermark.size, color="white")
         bg = Image.alpha_composite(bg, watermark)
 
-        watermark_img = merge_images(
+        watermark_img = concatenate_images(
             [container.get_watermark_img(), bg], Axis.VERTICAL, Align.END
         )
         container.update_watermark_img(watermark_img)

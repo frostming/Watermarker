@@ -18,7 +18,6 @@ from .image_processor import (
 from .utils import get_file_list
 
 logger = logging.getLogger(__name__)
-__version__ = "1.6.2"
 
 
 def process_one(processor_chain: ProcessorChain, image_file: Path, output: str) -> None:

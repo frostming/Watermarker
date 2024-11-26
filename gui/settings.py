@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from qfluentwidgets import (
     BodyLabel,
     CheckBox,
-    ColorPickerButton,
+    ColorSettingCard,
     ComboBox,
     ComboBoxSettingCard,
     ExpandGroupSettingCard,
@@ -31,7 +31,9 @@ from qfluentwidgets import (
 from qfluentwidgets import FluentIcon as fi
 from qfluentwidgets.common.icon import FluentIconBase
 
-from .config import cfg
+from watermarker.constants import COLOR_SCHEME_NAMES
+
+from .config import COLOR_SCHEMES, cfg
 
 
 class LayoutElement(QWidget):
@@ -41,7 +43,6 @@ class LayoutElement(QWidget):
         super().__init__(parent)
         self.name_config = getattr(cfg, f"{position}_name")
         self.is_bold_config = getattr(cfg, f"{position}_is_bold")
-        self.color_config = getattr(cfg, f"{position}_color")
         self.value_config = getattr(cfg, f"{position}_value")
 
         layout = QHBoxLayout(self)
@@ -50,23 +51,19 @@ class LayoutElement(QWidget):
             self.nameSelect.addItem(MODELS[option], userData=option)
         self.valueInput = LineEdit(self)
         self.isBoldSwitch = CheckBox("加粗", parent=self)
-        self.colorSelect = ColorPickerButton(self.color_config.value, "颜色", self)
         layout.addWidget(BodyLabel(label))
         layout.addStretch(1)
         layout.addWidget(self.nameSelect)
         layout.addWidget(self.valueInput)
         layout.addWidget(self.isBoldSwitch)
-        layout.addWidget(self.colorSelect)
 
         self.setName(self.name_config.value)
         self.setValue(self.value_config.value)
         self.setIsBold(self.is_bold_config.value)
-        self.setColor(self.color_config.value)
 
         self.nameSelect.currentIndexChanged.connect(self.__onNameSelectChanged)
         self.valueInput.textChanged.connect(self.setValue)
         self.isBoldSwitch.stateChanged.connect(self.setIsBold)
-        self.colorSelect.colorChanged.connect(self.setColor)
 
     def __onNameSelectChanged(self, index):
         data = self.nameSelect.itemData(index)
@@ -91,18 +88,6 @@ class LayoutElement(QWidget):
         self.isBoldSwitch.setChecked(value)
         cfg.set(self.is_bold_config, value)
 
-    def setColor(self, value: QColor):
-        self.colorSelect.setColor(value)
-        cfg.set(self.color_config, value)
-
-    def hideCustom(self):
-        self.isBoldSwitch.hide()
-        self.colorSelect.hide()
-
-    def showCustom(self):
-        self.isBoldSwitch.show()
-        self.colorSelect.show()
-
 
 class LayoutElementsSettingCard(ExpandSettingCard):
     def __init__(
@@ -119,18 +104,6 @@ class LayoutElementsSettingCard(ExpandSettingCard):
         self.viewLayout.addWidget(self.rightBottom)
 
         self._adjustViewSize()
-
-    def hideCustom(self):
-        self.leftTop.hideCustom()
-        self.leftBottom.hideCustom()
-        self.rightTop.hideCustom()
-        self.rightBottom.hideCustom()
-
-    def showCustom(self):
-        self.leftTop.showCustom()
-        self.leftBottom.showCustom()
-        self.rightTop.showCustom()
-        self.rightBottom.showCustom()
 
 
 class MarginSettingCard(SettingCard):
@@ -236,8 +209,6 @@ class FontSettingCard(ExpandGroupSettingCard):
         self.addGroupWidget(self.fontButton)
         self.addGroupWidget(self.boldFontButton)
 
-        # self._adjustViewSize()
-
 
 class LayoutSettingCard(SettingCardGroup):
     def __init__(self, parent=None):
@@ -247,6 +218,19 @@ class LayoutSettingCard(SettingCardGroup):
         super().__init__("布局设置", parent=parent)
         self.layoutTypeSelect = ComboBoxSettingCard(
             cfg.layout_type, fi.LAYOUT, "布局类型", texts=layout_texts, parent=self
+        )
+        self.colorScheme = ComboBoxSettingCard(
+            cfg.color_scheme,
+            fi.PALETTE,
+            "配色方案",
+            texts=list(COLOR_SCHEME_NAMES.values()),
+            parent=self,
+        )
+        self.foregroundColor = ColorSettingCard(
+            cfg.foreground_color, fi.PALETTE, "前景色", parent=self
+        )
+        self.backgroundColor = ColorSettingCard(
+            cfg.background_color, fi.PALETTE, "背景色", parent=self
         )
         self.logoSwitch = SwitchSettingCard(
             fi.PHOTO, "添加 Logo", configItem=cfg.logo_enable, parent=self
@@ -279,6 +263,9 @@ class LayoutSettingCard(SettingCardGroup):
         self.addSettingCards(
             [
                 self.layoutTypeSelect,
+                self.colorScheme,
+                self.foregroundColor,
+                self.backgroundColor,
                 self.logoSwitch,
                 self.logoPosition,
                 self.logoDirectory,
@@ -291,16 +278,19 @@ class LayoutSettingCard(SettingCardGroup):
         self.defaultLogo.clicked.connect(self.__onDefaultLogoClicked)
         cfg.layout_type.valueChanged.connect(self.__onLayoutTypeChanged)
         self.__onLayoutTypeChanged(cfg.get(cfg.layout_type))
+        cfg.color_scheme.valueChanged.connect(self.__onColorSchemeChanged)
+
+        self.__onColorSchemeChanged(cfg.get(cfg.color_scheme))
 
     def __onLayoutTypeChanged(self, value):
         from watermarker.config import Layout
 
-        if value == Layout.CUSTOM.value:
-            self.layoutElements.showCustom()
+        if value == Layout.STANDARD.value:
+            self.layoutElements.show()
             self.logoSwitch.show()
             self.logoPosition.show()
         else:
-            self.layoutElements.hideCustom()
+            self.layoutElements.hide()
             self.logoSwitch.hide()
             self.logoPosition.hide()
 
@@ -319,6 +309,16 @@ class LayoutSettingCard(SettingCardGroup):
         if file:
             cfg.set(cfg.logo_default, file)
             self.defaultLogo.setContent(file)
+
+    def __onColorSchemeChanged(self, value):
+        if value in COLOR_SCHEMES:
+            self.foregroundColor.hide()
+            self.backgroundColor.hide()
+            cfg.set(cfg.foreground_color, COLOR_SCHEMES[value][0])
+            cfg.set(cfg.background_color, COLOR_SCHEMES[value][1])
+        else:
+            self.foregroundColor.show()
+            self.backgroundColor.show()
 
 
 class SettingInterface(QScrollArea):

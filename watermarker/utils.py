@@ -165,41 +165,6 @@ def remove_white_edge(image: Image.Image) -> Image.Image:
     return new_image
 
 
-def concatenate_image(
-    images: Iterable[Image.Image], align: Align = Align.START
-) -> Image.Image:
-    """
-    将多张图片拼接成一列
-    :param images: 图片对象列表
-    :param align: 对齐方向，left/center/right
-    :return: 拼接后的图片对象
-    """
-    widths, heights = zip(*(i.size for i in images))
-
-    sum_height = sum(heights)
-    max_width = max(widths)
-
-    new_img = Image.new("RGBA", (max_width, sum_height), color=TRANSPARENT)
-
-    x_offset = 0
-    y_offset = 0
-    if align == Align.START:
-        for img in images:
-            new_img.paste(img, (0, y_offset))
-            y_offset += img.height
-    elif align == Align.CENTER:
-        for img in images:
-            x_offset = int((max_width - img.width) / 2)
-            new_img.paste(img, (x_offset, y_offset))
-            y_offset += img.height
-    else:
-        for img in images:
-            x_offset = max_width - img.width  # 右对齐
-            new_img.paste(img, (x_offset, y_offset))
-            y_offset += img.height
-    return new_img
-
-
 @overload
 def padding_image(
     image: None, padding_size: int, padding_location: str = ..., color: Color = ...
@@ -332,42 +297,54 @@ def append_image_by_side(
     background: Image.Image,
     images: Sequence[Image.Image],
     side: Side = "left",
-    padding: int = 200,
-    is_start: bool = False,
+    padding: tuple[int, int] = (200, 200),
+    gap: int = 200,
+    align: Align = Align.CENTER,
 ) -> None:
     """
     将图片横向拼接到背景图片中
     :param background: 背景图片对象
     :param images: 图片对象列表
     :param side: 拼接方向，left/right
-    :param padding: 图片之间的间距
-    :param is_start: 是否在最左侧添加 padding
+    :param padding: 图片与背景图片的间距
+    :param gap: 图片之间的间距
+    :param align: 对齐方式，center/end/start
     :return: 拼接后的图片对象
     """
+    px, py = padding
+    inner_height = background.height - 2 * py
     if side == "right":
-        if is_start:
-            x_offset = background.width - padding
-        else:
-            x_offset = background.width
+        x_offset = background.width - px
         for i in reversed(images):
             if i is None:
                 continue
-            i = resize_image_with_height(i, background.height, auto_close=False)
+            if i.height > inner_height:
+                i = resize_image_with_height(i, inner_height, auto_close=False)
             x_offset -= i.width
-            x_offset -= padding
-            background.paste(i, (x_offset, 0))
+            if align == Align.START:
+                y_offset = py
+            elif align == Align.END:
+                y_offset = background.height - py - i.height
+            else:
+                y_offset = (background.height - i.height) // 2
+            background.paste(i, (x_offset, y_offset))
+            x_offset -= gap
     else:
-        if is_start:
-            x_offset = padding
-        else:
-            x_offset = 0
+        x_offset = px
         for i in images:
             if i is None:
                 continue
-            i = resize_image_with_height(i, background.height, auto_close=False)
-            background.paste(i, (x_offset, 0))
+            if i.height > inner_height:
+                i = resize_image_with_height(i, inner_height, auto_close=False)
+            if align == Align.START:
+                y_offset = py
+            elif align == Align.END:
+                y_offset = background.height - py - i.height
+            else:
+                y_offset = (background.height - i.height) // 2
+            background.paste(i, (x_offset, y_offset))
             x_offset += i.width
-            x_offset += padding
+            x_offset += gap
 
 
 def text_to_image(
@@ -380,18 +357,20 @@ def text_to_image(
     """
     将文字内容转换为图片
     """
+    _, a, _, d = bold_font.getbbox("lgy", anchor="ls")
+    box_height = d - a
     if is_bold:
         font = bold_font
     if content == "":
         content = "   "
-    _, _, text_width, text_height = font.getbbox(content)
-    image = Image.new("RGBA", (text_width, int(text_height * 1.2)), color=TRANSPARENT)
+    _, _, box_width, _ = font.getbbox(content, anchor="ls")
+    image = Image.new("RGBA", (box_width, box_height), color=TRANSPARENT)
     draw = ImageDraw.Draw(image)
-    draw.text((0, 0), content, fill=fill, font=font)
+    draw.text((0, -a), content, fill=fill, font=font, anchor="ls")
     return image
 
 
-def merge_images(
+def concatenate_images(
     images: Iterable[Image.Image],
     axis: Axis = Axis.HORIZONTAL,
     align: Align = Align.CENTER,
