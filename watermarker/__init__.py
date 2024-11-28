@@ -51,7 +51,7 @@ def build_processor_chain(config: Config) -> ProcessorChain:
         processor_chain.add(ShadowProcessor(config))
 
     # 如果需要添加白边，且是水印布局，则添加白边处理器，白边处理器优先级最低
-    if config.base.white_margin.enable and "watermark" in layout_type.value:
+    if config.base.white_margin.enable and layout_type == Layout.STANDARD:
         processor_chain.add(MarginProcessor(config))
 
     # 如果需要按原有比例填充，且不是正方形布局，则添加填充处理器
