@@ -135,7 +135,7 @@ class StandardProcessor(ProcessorComponent):
 
         # 下方水印的占比
         ratio = (
-            0.04 if container.get_ratio() >= 1 else 0.09
+            0.07 if container.get_ratio() >= 1 else 0.1
         ) + 0.02 * config.get_font_padding_level()
 
         # 创建一个空白的水印图片
@@ -201,21 +201,26 @@ class StandardProcessor(ProcessorComponent):
         if self.logo_enable:
             if self.is_logo_left():
                 # 如果 logo 在左边
-                append_image_by_side(watermark, [logo, left])
-                append_image_by_side(watermark, [right], side="right")
+                append_image_by_side(watermark, [logo, left], padding=(300, 200))
+                append_image_by_side(
+                    watermark, [right], side="right", padding=(300, 200)
+                )
             else:
                 # 如果 logo 在右边
                 if logo is not None:
                     # 插入一根线条用于分割 logo 和文字
-                    line = LINE_GRAY.copy()
+                    height = max(logo.height, left.height, right.height)
+                    line = Image.new("RGBA", (20, height), color=GRAY)
                 else:
                     line = LINE_TRANSPARENT.copy()
-                append_image_by_side(watermark, [left])
-                append_image_by_side(watermark, [logo, line, right], side="right")
+                append_image_by_side(watermark, [left], padding=(300, 200))
+                append_image_by_side(
+                    watermark, [logo, line, right], side="right", padding=(300, 200)
+                )
                 line.close()
         else:
-            append_image_by_side(watermark, [left])
-            append_image_by_side(watermark, [right], side="right")
+            append_image_by_side(watermark, [left], padding=(300, 200))
+            append_image_by_side(watermark, [right], side="right", padding=(300, 200))
         left.close()
         right.close()
 

@@ -129,10 +129,8 @@ class Config(BaseModel, extra="allow"):
             yaml.safe_dump(self.model_dump(), f)
 
     def get_font_padding_level(self):
-        bold_font_size = (
-            self.base.bold_font_size if 1 <= self.base.bold_font_size <= 3 else 1
-        )
-        font_size = self.base.font_size if 1 <= self.base.font_size <= 3 else 1
+        bold_font_size = self.base.bold_font_size
+        font_size = self.base.font_size
         return bold_font_size + font_size
 
     def get_font_size(self):
